@@ -1,0 +1,63 @@
+services:
+  db:
+    container_name: postgres-container-banking-project
+    image: postgres:16
+    ports:
+      - 5001:5432
+    environment:
+      POSTGRES_DB: db_banking
+      POSTGRES_USER: db_user_banking
+      POSTGRES_PASSWORD: db_password_banking
+    volumes:
+      - ./postgres/data:/var/lib/postgresql/data
+      - ./postgres/airflow_init.sql:/docker-entrypoint-initdb.d/airflow_init.sql
+      - ./banking_data:/banking_raw_data
+    networks:
+      - banking-project-network
+  af:
+    container_name: airflow_container-banking-project
+    image: apache/airflow:3.0.2
+    user: "50000:0"  
+    ports:
+      - 8001:8080
+    environment:
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow_banking:airflow_banking@db:5432/airflow_db_banking
+      AIRFLOW_UID: 50000
+      AIRFLOW_GID: 0
+      AIRFLOW__CORE__FERNET_KEY: "o4PNNr_ZJScsfFO4WPsmsmTBmHC6SDouIOkwfl_4a_E="
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./utils:/opt/airflow/utils
+      - ./requirements.txt:/requirements.txt
+      - ./dbt:/opt/airflow/dbt:rw  
+    group_add:
+      - '1001'
+    depends_on:
+      - db
+    networks:
+      - banking-project-network
+    command: >
+      bash -c "pip install -r /requirements.txt && airflow db migrate && airflow standalone"
+
+  dbt:
+    container_name: dbt_container-banking-project
+    image: ghcr.io/dbt-labs/dbt-postgres:1.9.latest
+    volumes:
+      - ./dbt/banking_dbt_project/banking_dbt_project:/user/app
+      - ./dbt/:/root/.dbt
+      - ./dbt/profiles.yml:/opt/dbt/profiles/profiles.yml
+    working_dir: /user/app
+    environment:
+      - DBT_PROFILES_DIR=/root/.dbt
+    depends_on:
+      - db
+    networks:
+      - banking-project-network
+    # command: init banking_dbt_project
+    # command: debug
+    command: run
+  
+networks:
+  banking-project-network:
+    driver: bridge
