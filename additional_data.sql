@@ -15,7 +15,7 @@ INSERT INTO raw.customers (
     created_at
 ) VALUES (
     'BANK00000001',
-    'BANK_SYSTEM_CUSTOMER',
+    'KAI_ASIA_CUSTOMER',
     '0',
     '1',
     'Bank Owner',
