@@ -1,0 +1,605 @@
+version: 2
+
+models:
+  - name: stg_branches
+    description: "Staging data for branches"
+    columns:
+      - name: branch_id
+        description: "Each branch have an unique ID"
+        data_tests:
+          - unique
+          - not_null
+      - name: branch_name
+        description: "Name of the branch"
+        data_tests:
+          - not_null
+      - name: address
+        description: "Address of the branch"
+        data_tests:
+          - not_null
+      - name: status
+        description: "Status of the branch"
+        data_tests:
+          - accepted_values:
+              values: ['ACTIVE', 'CLOSED']
+      - name: created_at
+        description: "The timestamp that data is generated in raw"
+      - name: etl_at
+        description: "Timestamp when data is ingested to staging for the first time"
+      - name: etl_source_model
+        description: "From which source"
+      - name: data_date
+        data_tests:
+          - not_null
+
+  - name: stg_customers
+    description: "Staging data for customers"
+    columns:
+      - name: customer_id
+        description: "Each customer have their unique ID"
+        data_tests:
+          - unique
+          - not_null
+      - name: full_name
+        description: "Name of the customer"
+        data_tests:
+          - not_null
+      - name: gender
+        description: "Gender of the customer"
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: [1, 0]
+      - name: income_range
+        description: "Customer's monthly income"
+        data_tests:
+          - not_null
+      - name: occupation
+        description: "Customer's occupation"
+      - name: phone_number
+        description: "Customer's phone number"
+        data_tests:
+          - not_null
+      - name: email_address
+        description: "Customer's email address"
+      - name: identity_number
+        description: "Customer's identity number, very unique"
+        data_tests:
+          - unique
+          - not_null
+      - name: address
+        description: "Their address, null which mean homeless :D ?"
+        data_tests:
+          - not_null
+      - name: date_of_birth
+        description: "Customer's date of birth"
+        data_tests:
+          - not_null
+      - name: status
+        data_tests:
+          - not_null
+      - name: customer_segment
+        description: "Customer segment, the default is IRON"
+        data_tests:
+          - not_null
+      - name: customer_since
+        data_tests:
+          - not_null
+      - name: created_at
+      - name: data_date
+        data_tests:
+          - not_null
+      - name: etl_at
+      - name: etl_source_model
+    
+  - name: stg_accounts
+    description: "Staging data for accounts"
+    columns:
+      - name: account_id
+        description: "1 Customer can have multiple accounts"
+        data_tests:
+          - unique
+          - not_null
+      - name: customer_id
+        data_tests:
+          - not_null
+          - relationships:
+              to : ref('stg_customers')
+              field: customer_id
+      - name: account_number
+        description: "The identical number of the account"
+        data_tests:
+          - unique
+          - not_null
+      - name: account_type
+        description: "There are 2 types of account"
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: ['SAVINGS', 'CHECKING', 'CASH']
+      - name: balance
+        description: "The balance of the account, can't be negative"
+        data_tests:
+          - not_null
+      - name: status
+        description: "Status of the account"
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: ['ACTIVE', 'DISABLE']
+      - name: branch_id
+        description: "The id of the branch where this account was created"
+        data_tests:
+          - not_null
+          - relationships:
+              to: ref('stg_branches')
+              field: branch_id
+      - name: data_date
+        data_tests:
+          - not_null
+      - name: created_at
+      - name: etl_at
+      - name: etl_source_model
+
+  - name: stg_transactions
+    description: "Staging data for transactions"
+    columns:
+      - name: transaction_id
+        description: "Each transaction have unique ID"
+        data_tests: 
+          - not_null
+          - unique
+      - name: reference_number
+        description: "Reference number for this transaction, unique"
+        data_tests:
+          - not_null
+          - unique
+      - name: from_account_id
+        description: "From account ID"
+        data_tests:
+          - not_null
+          - relationships:
+              to: ref('stg_accounts')
+              field: account_id
+      - name: to_account_id
+        description: "To account ID"
+        data_tests:
+          - not_null
+          - relationships:
+              to: ref('stg_accounts')
+              field: account_id
+      - name: amount
+        description: "Amount of money, can't be negative"
+        data_tests:
+          - not_null
+      - name: transaction_type
+        description: "Type of this transaction"
+        accepted_values:
+          values: ['DEBIT', 'CREDIT', 'TRANSFER']
+      - name: transaction_channel
+        description: "Channel that have performed the transaction"
+        accepted_values:
+          values: ['ATM', 'MOBILE', 'BRANCH']
+      - name: transaction_description
+        description: "Description for this transaction, written by user"
+      - name: data_date
+      - name: created_at
+      - name: etl_at
+      - name: etl_source_model
+
+  - name: stg_transaction_entries
+    description: "Staging data for transaction entries"
+    columns:
+      - name: entry_id
+        description: "Each transaction has two corresponding entries to verify its validity"
+        data_tests:
+          - not_null
+          - unique
+      - name: transaction_id
+        description: "Refer to the correspond transaction"
+        data_tests:
+          - not_null
+          - relationships:
+              to: ref('stg_transactions')
+              field: transaction_id
+      - name: account_id
+        description: "ID of the account that made the transaction"
+        data_tests:
+          - not_null
+          - relationships:
+              to: ref('stg_accounts')
+              field: account_id
+      - name: debit_amount
+        description: "Debit amount"
+        data_tests:
+          - not_null
+      - name: credit_amount
+        description: "Credit amount"
+        data_tests:
+          - not_null
+      - name: balance_before
+        data_tests:
+          - not_null
+      - name: balance_after
+        data_tests:
+          - not_null
+      - name: entry_type
+        description: "Entry type, 2 types"
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: ['DEBIT', 'CREDIT']
+      - name: entry_sequence
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: ['1', '2']
+      - name: entry_description
+        description: "Description for this entry"
+      - name: data_date
+      - name: created_at
+      - name: etl_at
+      - name: etl_source_model
+
+  - name: stg_bonds
+    columns:
+      - name: bond_id
+        data_tests:
+          - not_null
+          - unique
+      - name: bond_name
+        data_tests:
+          - not_null
+      - name: bond_type
+        data_tests:
+          - not_null
+      - name: coupon_frequency
+      - name: issuer
+        data_tests:
+          - not_null
+      - name: face_value
+        data_tests:
+          - not_null
+      - name: interest_rate
+        data_tests:
+          - not_null
+      - name: issue_date
+        data_tests:
+          - not_null
+      - name: maturity_date
+        data_tests:
+          - not_null
+      - name: etl_at
+      - name: etl_source_model
+
+  - name: stg_bond_holdings
+    columns:
+      - name: bond_transaction_id
+        data_tests:
+          - not_null
+          - unique
+      - name: bond_id
+        data_tests:
+          - not_null
+          - relationships:
+              to: ref('stg_bonds')
+              field: bond_id
+      - name: customer_id
+        data_tests:
+          - not_null
+          - relationships:
+              to: ref('stg_customers')
+              field: customer_id
+      - name: buy_quantity
+        data_tests:
+          - not_null
+      - name: status
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: ['ACTIVE', 'MATURED', 'REDEEM']
+      - name: created_at
+        data_tests:
+            - not_null
+      - name: etl_at
+        data_tests:
+          - not_null
+      - name: etl_source_model
+        data_tests:
+          - not_null
+      - name: data_date
+        data_tests:
+          - not_null
+
+  - name: stg_fund_certificate_holdings
+    columns:
+      - name: fund_cert_holding_id
+        data_tests:
+          - not_null
+          - unique
+      - name: customer_id
+        data_tests:
+          - not_null
+          - relationships:
+              to: ref('stg_customers')
+              field: customer_id
+      - name: fund_name
+        data_tests:
+          - not_null
+      - name: units
+        data_tests:
+          - not_null
+      - name: nav_price
+        data_tests:
+          - not_null
+      - name: purchase_date
+        data_tests:
+          - not_null
+      - name: status
+        data_tests:
+          - not_null
+      - name: created_at
+        data_tests:
+          - not_null
+      - name: data_date
+        data_tests:
+          - not_null
+      - name: etl_at
+        data_tests:
+          - not_null
+      - name: etl_source_model
+        data_tests:
+          - not_null
+
+  - name: stg_term_deposit_holdings
+    columns:
+      - name: term_deposit_id
+        data_tests:
+          - not_null
+          - unique
+      - name: customer_id
+        data_tests:
+          - not_null
+          - relationships:
+              to: ref('stg_customers')
+              field: customer_id
+      - name: principal
+        data_tests:
+          - not_null
+      - name: interest_rate
+        data_tests:
+          - not_null
+      - name: interest_payment_interval
+        data_tests:
+          - not_null
+      - name: start_date
+        data_tests:
+          - not_null
+      - name: maturity_date
+        data_tests:
+          - not_null
+      - name: interest_calculation_method
+        data_tests:
+          - not_null
+      - name: status
+        data_tests:
+          - not_null
+      - name: created_at
+        data_tests:
+          - not_null
+      - name: data_date
+        data_tests:
+          - not_null
+      - name: etl_at
+        data_tests:
+          - not_null
+      - name: etl_source_model
+        data_tests:
+          - not_null
+    
+
+  - name: stg_certificate_of_deposit_holdings
+    columns:
+      - name: cd_id
+        data_tests:
+          - not_null
+          - unique
+      - name: customer_id
+        data_tests:
+          - not_null
+          - relationships:
+              to: ref('stg_customers')
+              field: customer_id
+      - name: amount
+        data_tests:
+          - not_null
+      - name: interest_rate
+        data_tests:
+          - not_null
+      - name: start_date
+        data_tests:
+          - not_null
+      - name: maturity_date
+        data_tests:
+          - not_null
+      - name: term_length
+        data_tests:
+          - not_null
+      - name: interest_calculation_method
+        data_tests:
+          - not_null
+      - name: status
+        data_tests:
+          - not_null
+      - name: created_at
+        data_tests:
+          - not_null
+      - name: data_date
+        data_tests:
+          - not_null
+      - name: etl_at
+        data_tests:
+          - not_null
+      - name: etl_source_model
+        data_tests:
+          - not_null
+
+  - name: stg_loans
+    columns:
+      - name: loan_id
+        data_tests:
+          - not_null
+          - unique
+      - name: customer_id
+        data_tests:
+          - not_null
+          - relationships:
+              to: ref('stg_customers')
+              field: customer_id
+      - name: loan_type
+        data_tests:
+          - not_null
+      - name: loan_amount
+        data_tests:
+          - not_null
+      - name: interest_rate
+        data_tests:
+          - not_null
+      - name: term_length
+        data_tests:
+          - not_null
+      - name: start_date
+        data_tests:
+          - not_null
+      - name: maturity_date
+        data_tests:
+          - not_null
+      - name: repayment_method
+        data_tests:
+          - not_null
+      - name: penalty_rate
+        data_tests:
+          - not_null
+      - name: collateral
+      - name: status
+        data_tests:
+          - not_null
+      - name: remaining_balance
+        data_tests:
+          - not_null
+      - name: created_at
+        data_tests:
+          - not_null
+      - name: data_date
+        data_tests:
+          - not_null
+      - name: etl_at
+        data_tests:
+          - not_null
+      - name: etl_source_model
+        data_tests:
+          - not_null
+
+  - name: stg_loan_repayments
+    columns:
+      - name: repayment_id
+        data_tests:
+          - not_null
+          - unique
+      - name: loan_id
+        data_tests:
+          - not_null
+          - relationships:
+              to: ref('stg_loans')
+              field: loan_id
+      - name: due_date
+        data_tests:
+          - not_null
+      - name: repayment_date
+        data_tests:
+          - not_null
+      - name: principal_paid
+        data_tests:
+          - not_null
+      - name: interest_paid
+        data_tests:
+          - not_null
+      - name: late_fee_paid
+        data_tests:
+          - not_null
+      - name: remaining_balance
+        data_tests:
+          - not_null
+      - name: status
+        data_tests:
+          - not_null
+      - name: payment_method
+        data_tests:
+          - not_null
+      - name: created_at
+        data_tests:
+          - not_null
+      - name: data_date
+        data_tests:
+          - not_null
+      - name: etl_at
+        data_tests:
+          - not_null
+      - name: etl_source_model
+        data_tests:
+          - not_null
+
+snapshots:
+  - name: snp_branches
+    description: "snapshot data for branches table"
+    columns:
+      - name: branch_id
+      - name: branch_name
+      - name: address
+      - name: status
+      - name: data_date
+      - name: created_at
+      - name: etl_at
+      - name: etl_source_model
+      - name: dbt_scd_id
+      - name: dbt_updated_at
+      - name: dbt_valid_from
+      - name: dbt_valid_to
+    
+  - name: snp_customers
+    description: "Snapshot data for customers"
+    columns:
+      - name: customer_id
+      - name: full_name
+      - name: phone_number
+      - name: email_address
+      - name: identity_number
+      - name: address
+      - name: date_of_birth
+      - name: data_date
+      - name: created_at
+      - name: etl_at
+      - name: etl_source_model
+      - name: dbt_scd_id
+      - name: dbt_updated_at
+      - name: dbt_valid_from
+      - name: dbt_valid_to
+    
+  - name: snp_accounts
+    description: "Snapshot data for accounts"
+    columns:
+      - name: account_id
+      - name: customer_id
+      - name: account_number
+      - name: account_type
+      - name: balance
+      - name: status
+      - name: branch_id
+      - name: data_date
+      - name: created_at
+      - name: etl_at
+      - name: etl_source_model
+      - name: dbt_scd_id
+      - name: dbt_updated_at
+      - name: dbt_valid_from
+      - name: dbt_valid_to

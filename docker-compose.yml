@@ -44,7 +44,7 @@ services:
     container_name: dbt_container-banking-project
     image: ghcr.io/dbt-labs/dbt-postgres:1.9.latest
     volumes:
-      - ./dbt/banking_dbt_project/banking_dbt_project:/user/app
+      - ./dbt/banking_dbt_project:/user/app
       - ./dbt/:/root/.dbt
       - ./dbt/profiles.yml:/opt/dbt/profiles/profiles.yml
     working_dir: /user/app
